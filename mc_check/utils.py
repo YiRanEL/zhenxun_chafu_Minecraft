@@ -259,7 +259,7 @@ async def parse_host(host_name) -> Tuple[str, int]:
     - 第一个元素是主机的IP地址（字符串形式）。
     - 第二个元素是主机的端口号（整数形式），如果主机名中未指定端口，则为0。
     """
-    pattern = r"(?:\[(.+?)\]|(.+?))(?::(\d+))?$"
+    pattern = r"(?:\[(.+?)\]|(.+?))(?:[:：](\d+))?$"
     if not (match := re.match(pattern, host_name)):
         return host_name, 0
 

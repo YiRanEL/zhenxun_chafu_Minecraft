@@ -7,11 +7,9 @@ from .utils import (
     handle_exception
 )
 from nonebot.plugin import PluginMetadata
-from zhenxun.configs.utils import PluginCdBlock, PluginExtraData, RegisterConfig # type: ignore
-from nonebot import require
-require("nonebot_plugin_alconna")
-from nonebot_plugin_alconna import on_alconna, Match, UniMessage, Text  # type: ignore  # noqa: E402
-from arclet.alconna import Args, Alconna  # type: ignore # noqa: E402
+from zhenxun.configs.utils import PluginCdBlock, PluginExtraData, RegisterConfig
+from nonebot_plugin_alconna import on_alconna, Match, UniMessage, Text
+from arclet.alconna import Args, Alconna
 
 
 __plugin_meta__ = PluginMetadata(
