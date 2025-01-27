@@ -55,6 +55,24 @@ v1.24
 | `lang_now` | None | Private/Group Chat | View the current language used by the plugin for rendering images |
 | `lang_list` | None | Private/Group Chat | View the list of languages supported by the plugin |
 
+### 🎈 Special Notes
+Querying an IPv6 server
+```
+mcheck [2001:db8:85a3::8a2e:370:7334]:25565  <- IPv6 server address and port, the port and colon can be omitted
+```
+or
+```
+mcheck 2001:db8:85a3::8a2e:370:7334  <- IPv6 server address, the plugin will automatically complete the port number
+```
+or
+```
+mcheck 2001:db8:85a3::8a2e:370:7334:25565  <- IPv6 server address and port
+```
+or
+```
+mcheck [2001:db8:85a3::8a2e:370:7334]  <- IPv6服务器地址
+```
+
 ## ⚙️ Configuration
 
 | Configuration Item | Required | Default Value | Description |
