@@ -1,24 +1,26 @@
+import asyncio
+import base64
 import contextlib
 import io
-import re
-import ujson
 import os
-import idna
+import re
+import traceback
+
 import dns.asyncresolver
 import dns.name
-import base64
-import traceback
-import asyncio
-from zhenxun.services.log import logger  # type: ignore
-from .data_source import MineStat, SlpProtocols, ConnStatus
-from .configs import lang_data, lang, message_type, VERSION
-from PIL import Image, ImageDraw, ImageFont
-from typing import Optional, Tuple, List
+import idna
 from nonebot import require
+from PIL import Image, ImageDraw, ImageFont
+import ujson
+
+from zhenxun.services.log import logger
+
+from .configs import VERSION, lang, lang_data, message_type
+from .data_source import ConnStatus, MineStat, SlpProtocols
 
 require("nonebot_plugin_alconna")
-from nonebot_plugin_alconna import Text  # type: ignore # noqa: E402
-from nonebot_plugin_alconna import Image as NImage  # type: ignore # noqa: E402
+from nonebot_plugin_alconna import Image as NImage
+from nonebot_plugin_alconna import Text
 
 
 async def handle_exception(e):
@@ -41,7 +43,7 @@ async def change_language_to(language: str):
         return f"Change to '{language}' success!"
 
 
-async def build_result(ms, type=0):
+async def build_result(ms, address, type=0):
     """
     根据类型构建并返回查询结果。
 
@@ -58,13 +60,16 @@ async def build_result(ms, type=0):
             "version": await parse_motd2html(ms.version),
             "slp_protocol": str(ms.slp_protocol),
             "protocol_version": ms.protocol_version,
-            "address": ms.address,
+            "address": address,
+            "ip": ms.address,
             "port": ms.port,
             "delay": f"{ms.latency}ms",
             "gamemode": ms.gamemode,
             "motd": await parse_motd2html(ms.motd),
             "players": f"{ms.current_players}/{ms.max_players}",
-            "player_list": await parse_motd2html("§r, ".join(ms.player_list)) if ms.player_list else None,
+            "player_list": await parse_motd2html("§r, ".join(ms.player_list))
+            if ms.player_list
+            else None,
             "lang": lang_data[lang],
             "VERSION": VERSION,
         }
@@ -78,7 +83,9 @@ async def build_result(ms, type=0):
         )
         return NImage(raw=pic)
     elif type == 1:
-        motd_part = f"\n{lang_data[lang]['motd']}{await parse_motd2mark(ms.motd)}[#RESET]"
+        motd_part = (
+            f"\n{lang_data[lang]['motd']}{await parse_motd2mark(ms.motd)}[#RESET]"
+        )
         version_part = (
             f"\n{lang_data[lang]['version']}{await parse_motd2mark(ms.version)}[#RESET]"
         )
@@ -90,7 +97,8 @@ async def build_result(ms, type=0):
         f"{version_part}"
         f"\n{lang_data[lang]['slp_protocol']}{ms.slp_protocol}"
         f"\n{lang_data[lang]['protocol_version']}{ms.protocol_version}"
-        f"\n{lang_data[lang]['address']}{ms.address}"
+        f"\n{lang_data[lang]['address']}{address}"
+        f"\n{lang_data[lang]['ip']}{ms.address}"
         f"\n{lang_data[lang]['port']}{ms.port}"
         f"\n{lang_data[lang]['delay']}{ms.latency}ms"
     )
@@ -104,7 +112,13 @@ async def build_result(ms, type=0):
         + f"\n{lang_data[lang]['players']}{ms.current_players}/{ms.max_players}"
     )
     if type == 1:
-        result += f"\n{lang_data[lang]['player_list']}{await parse_motd2mark(', '.join(ms.player_list))}[#RESET]" if ms.player_list else ""
+        result += (
+            f"""\n{lang_data[lang]["player_list"]}{
+                await parse_motd2mark(", ".join(ms.player_list))
+            }[#RESET]"""
+            if ms.player_list
+            else ""
+        )
         return (
             [
                 NImage(
@@ -121,7 +135,11 @@ async def build_result(ms, type=0):
             )
         )
     elif type == 2:
-        result += f"\n{lang_data[lang]['player_list']}{', '.join(ms.player_list)}" if ms.player_list else ""
+        result += (
+            f"\n{lang_data[lang]['player_list']}{', '.join(ms.player_list)}"
+            if ms.player_list
+            else ""
+        )
         return (
             [
                 Text(result),
@@ -133,24 +151,31 @@ async def build_result(ms, type=0):
         )
 
 
-async def get_mc(java, bedrock, timeout: int = 5
-                 ) -> List[Tuple[Optional[MineStat], Optional[ConnStatus]]]:
+async def get_mc(
+    ip, port, ip_type, timeout: int = 5
+) -> list[tuple[MineStat | None, ConnStatus | None]]:
     """
     获取Java版和Bedrock版的MC服务器信息。
 
     参数:
-    - host (str): 服务器的IP地址。
+    - ip (str): 服务器的IP地址。
     - port (int): 服务器的端口。
+    - ip_type (int): 服务器的IP类型。
     - timeout (int): 请求超时时间，默认为5秒。
 
     返回:
-    - list: 包含Java版和Bedrock版服务器信息的列表，如果列表为空则返回None。
+    - list: 包含Java版和Bedrock版服务器信息的列表。
     """
     loop = asyncio.get_event_loop()
-    return [await loop.run_in_executor(None, get_java, java[0], java[1], timeout), await loop.run_in_executor(None, get_bedrock, bedrock[0], bedrock[1], timeout)]
+    if ip_type == "SRV":
+        return [await loop.run_in_executor(None, get_java, ip, port, ip_type, timeout)]
+    return [
+        await loop.run_in_executor(None, get_java, ip, port, ip_type, timeout),
+        await loop.run_in_executor(None, get_bedrock, ip, port, ip_type, timeout),
+    ]
 
 
-async def get_message_list(ip: str, port: int, timeout: int = 5) -> List[Text]:
+async def get_message_list(ip: str, port: int, timeout: int = 5) -> list[Text]:
     """
     异步函数，根据IP和端口获取消息列表。
 
@@ -162,18 +187,25 @@ async def get_message_list(ip: str, port: int, timeout: int = 5) -> List[Text]:
     返回:
     - list: 包含消息的列表。
     """
-    srv = await resolve_srv(ip, port)
-    assert isinstance(srv[0], str)
+    ip_groups = await get_origin_address(ip, port)
     messages = []
-    ms = await get_mc((srv[0], int(srv[1])), (ip, port), timeout)
-    for i in ms:
-        if i[0] is not None:
-            messages.append(await build_result(i[0], message_type))
+    results = await asyncio.gather(
+        *(
+            get_mc(ip_group[0], ip_group[1], ip_group[2], timeout)
+            for ip_group in ip_groups
+        )
+    )
+
+    for ms in results:
+        for i in ms:
+            if i[0] is not None:
+                messages.append(await build_result(i[0], ip, message_type))
     if not messages:
         messages.append(
             next(
                 (
                     Text(f"{lang_data[lang][str(item[1])]}")
+                    for ms in results
                     for item in ms
                     if item[1] != ConnStatus.CONNFAIL
                 ),
@@ -184,8 +216,8 @@ async def get_message_list(ip: str, port: int, timeout: int = 5) -> List[Text]:
 
 
 def get_bedrock(
-    host: str, port: int, timeout: int = 5
-) -> Tuple[Optional[MineStat], Optional[ConnStatus]]:
+    host: str, port: int, ip_type, timeout: int = 5
+) -> tuple[MineStat | None, ConnStatus | None]:
     """
     异步函数，用于通过指定的主机名、端口和超时时间获取Minecraft Bedrock版服务器状态。
 
@@ -197,19 +229,18 @@ def get_bedrock(
     返回:
     - MineStat实例，包含服务器状态信息，如果服务器在线的话；否则可能返回None。
     """
-    result = MineStat(host, port, timeout, SlpProtocols.BEDROCK_RAKNET)
+    v6 = ip_type == "IPv6"
+    print(f"Getting Bedrock server status: {host}:{port} v6 {v6}")
+    result = MineStat(host, port, timeout, SlpProtocols.BEDROCK_RAKNET, v6)
 
     if result.online:
         return result, ConnStatus.SUCCESS
-    if result.connection_status == ConnStatus.UNKNOWN:
-        return None, ConnStatus.CONNFAIL
-    else:
-        return None, result.connection_status
+    return None, result.connection_status
 
 
 def get_java(
-    host: str, port: int, timeout: int = 5
-) -> Tuple[Optional[MineStat], Optional[ConnStatus]]:
+    host: str, port: int, ip_type, timeout: int = 5
+) -> tuple[MineStat | None, ConnStatus | None]:
     """
     异步函数，用于通过指定的主机名、端口和超时时间获取Minecraft Java版服务器状态。
 
@@ -221,30 +252,30 @@ def get_java(
     返回:
     - MineStat 实例，包含服务器状态信息，如果服务器在线的话；否则可能返回 None。
     """
+    v6 = ip_type == "IPv6"
+    print(f"Getting Java server status: {host}:{port} v6 {v6}")
+
     # Minecraft 1.4 & 1.5 (legacy SLP)
-    result = MineStat(host, port, timeout, SlpProtocols.LEGACY)
+    result = MineStat(host, port, timeout, SlpProtocols.LEGACY, v6)
 
     # Minecraft Beta 1.8 to Release 1.3 (beta SLP)
     if result.connection_status not in [ConnStatus.CONNFAIL, ConnStatus.SUCCESS]:
-        result = MineStat(host, port, timeout, SlpProtocols.BETA)
+        result = MineStat(host, port, timeout, SlpProtocols.BETA, v6)
 
     # Minecraft 1.6 (extended legacy SLP)
     if result.connection_status is not ConnStatus.CONNFAIL:
-        result = MineStat(host, port, timeout, SlpProtocols.EXTENDED_LEGACY)
+        result = MineStat(host, port, timeout, SlpProtocols.EXTENDED_LEGACY, v6)
 
     # Minecraft 1.7+ (JSON SLP)
     if result.connection_status is not ConnStatus.CONNFAIL:
-        result = MineStat(host, port, timeout, SlpProtocols.JSON)
+        result = MineStat(host, port, timeout, SlpProtocols.JSON, v6)
 
     if result.online:
         return result, ConnStatus.SUCCESS
-    if result.connection_status == ConnStatus.UNKNOWN:
-        return None, ConnStatus.CONNFAIL
-    else:
-        return None, result.connection_status
+    return None, result.connection_status
 
 
-async def parse_host(host_name) -> Tuple[str, int]:
+async def parse_host(host_name) -> tuple[str, int]:
     """
     解析主机名（可选端口）。
 
@@ -271,73 +302,165 @@ async def parse_host(host_name) -> Tuple[str, int]:
     return address, port
 
 
-async def is_invalid_address(address: str) -> bool:
+async def is_validity_address(address: str) -> bool:
     """
-    异步判断给定的地址是否为无效的域名或IP地址。
+    异步判断给定的地址是否为有效的域名或IP地址。
 
     参数:
-    address (str): 需要验证的地址，可以是电子邮件地址或IP地址。
+    address (str): 需要验证的地址，可以是域名地址或IP地址。
 
     返回:
-    bool: 如果地址无效则返回True，否则返回False。
+    bool: 如果地址有效则返回True，否则返回False。
     """
-    # 域名正则（包含普通域名与 Punycode 支持）
-    if address.lower() == "localhost":
-        return False
-    domain_pattern = r"^(?!-)(?:[A-Za-z0-9-]{1,63}\.)+(?:[A-Za-z]{2,})$|^(xn--[A-Za-z0-9-]{1,63})\.[A-Za-z]{2,}$"
-    ipv4_pattern = r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"
-    ipv6_pattern = r"^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$"
 
-    # 尝试将域名转换为Punycode
+    return (
+        (await is_domain(address))
+        or (await is_ipv4(address))
+        or (await is_ipv6(address))
+    )
+
+
+async def is_domain(address: str) -> bool:
+    """
+    判断给定的地址是否为域名。
+
+    参数:
+    address (str): 需要验证的地址。
+
+    返回:
+    bool: 如果地址为域名则返回True，否则返回False。
+    """
+    if address.lower() == "localhost":
+        return True
+    domain_pattern = re.compile(
+        r"^(?!-)(?:[A-Za-z0-9-]{1,63}\.)+(?:[A-Za-z]{2,})$|^(xn--[A-Za-z0-9-]{1,63})\.[A-Za-z]{2,}$"
+    )
     try:
         punycode_address = idna.encode(address).decode("utf-8")
-        match_domain = re.match(domain_pattern, punycode_address)
+        return bool(domain_pattern.match(punycode_address))
     except idna.IDNAError:
-        match_domain = None
-
-    # 对IPv4和IPv6地址进行匹配
-    match_ipv4 = re.match(ipv4_pattern, address)
-    match_ipv6 = re.match(ipv6_pattern, address)
-
-    # 如果三个匹配都失败，则返回True，表示无效
-    return (match_domain is None) and (match_ipv4 is None) and (match_ipv6 is None)
+        return False
 
 
-async def resolve_srv(ip: str, port: int = 0) -> List[str | int]:
+async def is_ipv4(address: str) -> bool:
     """
-    通过DNS解析服务器地址和端口。
-
-    如果指定的端口为0，则表示需要通过SRV记录解析端口。
+    判断给定的地址是否为IPv4地址。
 
     参数:
-        ip (str): 服务器IP地址。
-        port (int): 服务器端口，如果为0则需要通过SRV记录获取。
+    address (str): 需要验证的地址。
 
     返回:
-        list: 包含服务器地址和端口的列表。
+    bool: 如果地址为IPv4地址则返回True，否则返回False。
     """
+    ipv4_pattern = re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
+    match_ipv4 = ipv4_pattern.match(address)
+
+    if not match_ipv4:
+        return False
+
+    parts = address.split(".")
+    return not any(not part.isdigit() or not 0 <= int(part) <= 255 for part in parts)
+
+
+async def is_ipv6(address: str) -> bool:
+    """
+    判断给定的地址是否为IPv6地址。
+
+    参数:
+    address (str): 需要验证的地址。
+
+    返回:
+    bool: 如果地址为IPv6地址则返回True，否则返回False。
+    """
+    ipv6_pattern = re.compile(
+        r"^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$"
+    )
+    match_ipv6 = ipv6_pattern.match(address)
+
+    return bool(match_ipv6)
+
+
+async def get_ip_type(address: str) -> str:
+    if not await is_validity_address(address):
+        return "Unknown"
+    if await is_ipv4(address):
+        return "IPv4"
+    elif await is_ipv6(address):
+        return "IPv6"
+    else:
+        return "Domain"
+
+
+async def get_origin_address(
+    domain: str, ip_port: int, is_resolve_srv=True
+) -> list[tuple[str, int, str]]:
+    """
+    获取地址所解析的A或AAAA记录，如果传入不是域名直接返回。
+    同时返回地址是IPv6还是IPv4。
+    如果地址是域名，首先尝试解析SRV记录。
+
+    参数:
+    - address (str): 需要解析的地址。
+    - ip_port (int): 适用于IPv4和IPv6地址的默认端口号。
+
+    返回:
+    - List[Tuple[str, int,str]]: 一个列表，包含一个元组，元组包含三个元素：
+      - 第一个元素是解析后的地址（字符串形式）。
+      - 第二个元素是地址的端口号（整数形式。
+      - 第三个元素是地址的类型（"IPv4" 或 "IPv6" 或 "SRV"）。
+    """
+    ip_type = await get_ip_type(domain)
+    if ip_type != "Domain":
+        return [(domain, ip_port, ip_type)]
+    data = []
+
     resolver = dns.asyncresolver.Resolver()
     resolver.timeout = 10
-    resolver.retries = 3  # type: ignore
-    resolver.nameservers = ["223.5.5.5", "180.184.1.1", "1.1.1.1"]
+    resolver.retries = 3
 
-    qname = dns.name.from_text(f"_minecraft._tcp.{ip}")
+    async def resolve_srv():
+        with contextlib.suppress(
+            dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.Timeout
+        ):
+            srv_response = await resolver.resolve(f"_minecraft._tcp.{domain}", "SRV")
+            for rdata in srv_response:
+                srv_address = str(rdata.target).rstrip(".")
+                srv_port = rdata.port
+                ip_type = await get_ip_type(srv_address)
+                print(f"SRV record found: {srv_address}:{srv_port} ({ip_type})")
+                if ip_type == "Domain":
+                    srv_address = await get_origin_address(srv_address, srv_port, False)
+                    data.extend(srv_address)
+                else:
+                    data.append((srv_address, srv_port, "SRV"))
 
-    with contextlib.suppress(dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):  # type: ignore
-        response = await resolver.resolve(qname, "SRV")
+    async def resolve_aaaa():
+        with contextlib.suppress(
+            dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.Timeout
+        ):
+            response = await resolver.resolve(domain, "AAAA")
+            for rdata in response:
+                print(f"AAAA record found: {rdata.address!s}")
+                data.append((str(rdata.address), ip_port, "IPv6"))
 
-        if not response:
-            return [ip, port]
+    async def resolve_a():
+        with contextlib.suppress(
+            dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.Timeout
+        ):
+            response = await resolver.resolve(domain, "A")
+            for rdata in response:
+                print(f"A record found: {rdata.address!s}")
+                data.append((str(rdata.address), ip_port, "IPv4"))
 
-        for rdata in response:  # type: ignore
-            address = str(rdata.target).rstrip(".")
-            if port == 0:
-                port = rdata.port
-            return [address, port]
-    return [ip, port]
+    if is_resolve_srv:
+        await asyncio.gather(resolve_srv(), resolve_aaaa(), resolve_a())
+    else:
+        await asyncio.gather(resolve_aaaa(), resolve_a())
+
+    return data
 
 
-async def parse_motd2mark(json_data: Optional[str]) -> Optional[str]:
+async def parse_motd2mark(json_data: str | None) -> str | None:
     """
     解析MOTD数据并转换为带有自定义十六进制颜色标记的字符串。
 
@@ -411,7 +534,7 @@ async def parse_motd2mark(json_data: Optional[str]) -> Optional[str]:
         i = 0
         while i < len(json_data):
             if json_data[i] == "§":
-                style_code = json_data[i: i + 2]
+                style_code = json_data[i : i + 2]
                 if style_code in standard_color_map:
                     result += standard_color_map[style_code]
                     i += 2
@@ -463,7 +586,7 @@ async def parse_motd2mark(json_data: Optional[str]) -> Optional[str]:
     return await parse_extra(json_data)
 
 
-async def parse_motd2html(json_data: Optional[str]) -> Optional[str]:
+async def parse_motd2html(json_data: str | None) -> str | None:
     """
     解析MOTD数据并转换为带有自定义颜色的HTML字符串。
 
@@ -549,8 +672,7 @@ async def parse_motd2html(json_data: Optional[str]) -> Optional[str]:
                 if len(hex_color) == 3:
                     hex_color = "".join([c * 2 for c in hex_color])
                 color_code = hex_color.upper()
-                color_html_str = (
-                    f'<span style="color:#{color_code};">', "</span>")
+                color_html_str = (f'<span style="color:#{color_code};">', "</span>")
             else:
                 color_html_str = standard_color_map.get(color, ("", ""))
                 color_code = re.search(
@@ -592,7 +714,7 @@ async def parse_motd2html(json_data: Optional[str]) -> Optional[str]:
         styles = []
         while i < len(json_data):
             if json_data[i] == "§":
-                style_code = json_data[i: i + 2]
+                style_code = json_data[i : i + 2]
                 if style_code in standard_color_map:
                     open_tag, close_tag = standard_color_map[style_code]
 
@@ -608,7 +730,7 @@ async def parse_motd2html(json_data: Optional[str]) -> Optional[str]:
                     i += 2
                     continue
             # 处理换行符
-            if json_data[i: i + 2] == "\n":
+            if json_data[i : i + 2] == "\n":
                 result += "<br>"
                 i += 2
                 continue
@@ -637,8 +759,7 @@ class ColoredTextImage:
         self.text = text
         self.padding = padding
         self.background_color = background_color
-        self.font_path = os.path.join(
-            os.path.dirname(__file__), "font", "Regular.ttf")
+        self.font_path = os.path.join(os.path.dirname(__file__), "font", "Regular.ttf")
         self.bold_font_path = os.path.join(
             os.path.dirname(__file__), "font", "Bold.ttf"
         )
@@ -713,8 +834,7 @@ class ColoredTextImage:
         """
         text = self.text
         width, height = self._calculate_dimensions(text)
-        self.image = Image.new("RGB", (width, height),
-                               self.background_color)  # type: ignore
+        self.image = Image.new("RGB", (width, height), self.background_color)  # type: ignore
         self.draw = ImageDraw.Draw(self.image)
         await self._parse_style(text)
         return self
@@ -751,7 +871,7 @@ class ColoredTextImage:
                     end_tag = line.find("]", i)
                     if end_tag == -1:
                         break
-                    tag = line[i: end_tag + 1]
+                    tag = line[i : end_tag + 1]
                     if tag == "[#BOLD]":
                         styles["bold"] = True
                     elif tag == "[#ITALIC]":
@@ -769,7 +889,7 @@ class ColoredTextImage:
                             hex_color = "".join([c * 2 for c in hex_color])
                         try:
                             current_color = tuple(
-                                int(hex_color[j: j + 2], 16) for j in (0, 2, 4)
+                                int(hex_color[j : j + 2], 16) for j in (0, 2, 4)
                             )
                         except ValueError:
                             current_color = (0, 0, 0)
@@ -778,8 +898,7 @@ class ColoredTextImage:
 
                 char = line[i]
                 font_mod = get_font(styles["bold"], styles["italic"])
-                bbox = self.draw.textbbox(
-                    (x_offset, y_offset), char, font=font_mod)
+                bbox = self.draw.textbbox((x_offset, y_offset), char, font=font_mod)
                 width = bbox[2] - bbox[0]
 
                 self.draw.text(
@@ -797,8 +916,7 @@ class ColoredTextImage:
                 if styles["strikethrough"]:
                     strikethrough_y = y_offset + self.font_size / 2
                     self.draw.line(
-                        (x_offset, strikethrough_y,
-                         x_offset + width, strikethrough_y),
+                        (x_offset, strikethrough_y, x_offset + width, strikethrough_y),
                         fill=current_color,
                         width=1,
                     )

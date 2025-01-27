@@ -8,6 +8,7 @@ English|[简体中文](README.md)
 
 ## 📈 Implemented functions
 
+- [x] IPv6 supported
 - [x] Full platform adapter support
 - [x] Adapted unicode full fonts and glyphs
 - [x] Render Motd styles
@@ -36,9 +37,10 @@ English|[简体中文](README.md)
 
 ## 🖼️ Renderings
 
-v1.22
+v1.24
 
 ![v1.22](https://github.com/user-attachments/assets/5ec475a0-4a73-4a51-b1b7-3986ed15ac37)
+![Image](https://github.com/user-attachments/assets/2ca058f5-2341-425d-8033-63dad8d43fbf)
 
 ## 💿 Install
 

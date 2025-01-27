@@ -8,6 +8,7 @@
 
 ## 📈 已实现的功能
 
+- [x] IPv6支持
 - [x] 支持全平台适配器
 - [x] 适配Unicode全字体与字形
 - [x] 渲染Motd样式
@@ -36,10 +37,10 @@
 
 ## 🖼️ 效果图
 
-v1.22
+v1.24
 
 ![v1.22](https://github.com/user-attachments/assets/6a6a2dd9-7e98-4a83-a290-9fc8acc62342)
-
+![Image](https://github.com/user-attachments/assets/2ca058f5-2341-425d-8033-63dad8d43fbf)
 
 ## 💿 安装
 
