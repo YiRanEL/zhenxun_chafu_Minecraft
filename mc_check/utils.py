@@ -167,7 +167,7 @@ async def get_mc(
     - list: 包含Java版和Bedrock版服务器信息的列表。
     """
     loop = asyncio.get_event_loop()
-    if ip_type == "SRV":
+    if ip_type.startswith("SRV"):
         return [await loop.run_in_executor(None, get_java, ip, port, ip_type, timeout)]
     return [
         await loop.run_in_executor(None, get_java, ip, port, ip_type, timeout),
@@ -229,7 +229,7 @@ def get_bedrock(
     返回:
     - MineStat实例，包含服务器状态信息，如果服务器在线的话；否则可能返回None。
     """
-    v6 = ip_type == "IPv6"
+    v6 = "IPv6" in ip_type
     result = MineStat(host, port, timeout, SlpProtocols.BEDROCK_RAKNET, v6)
 
     if result.online:
@@ -251,7 +251,7 @@ def get_java(
     返回:
     - MineStat 实例，包含服务器状态信息，如果服务器在线的话；否则可能返回 None。
     """
-    v6 = ip_type == "IPv6"
+    v6 = "IPv6" in ip_type
 
     # Minecraft 1.4 & 1.5 (legacy SLP)
     result = MineStat(host, port, timeout, SlpProtocols.LEGACY, v6)
@@ -427,7 +427,7 @@ async def get_origin_address(
                 ip_type = await get_ip_type(srv_address)
                 if ip_type == "Domain":
                     srv_address = await get_origin_address(srv_address, srv_port, False)
-                    data.extend(srv_address)
+                    data.extend([(addr, port, f"SRV-{ip_type}") for addr, port, ip_type in srv_address])
                 else:
                     data.append((srv_address, srv_port, "SRV"))
 
