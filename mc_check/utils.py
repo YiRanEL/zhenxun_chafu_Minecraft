@@ -230,7 +230,6 @@ def get_bedrock(
     - MineStat实例，包含服务器状态信息，如果服务器在线的话；否则可能返回None。
     """
     v6 = ip_type == "IPv6"
-    print(f"Getting Bedrock server status: {host}:{port} v6 {v6}")
     result = MineStat(host, port, timeout, SlpProtocols.BEDROCK_RAKNET, v6)
 
     if result.online:
@@ -253,7 +252,6 @@ def get_java(
     - MineStat 实例，包含服务器状态信息，如果服务器在线的话；否则可能返回 None。
     """
     v6 = ip_type == "IPv6"
-    print(f"Getting Java server status: {host}:{port} v6 {v6}")
 
     # Minecraft 1.4 & 1.5 (legacy SLP)
     result = MineStat(host, port, timeout, SlpProtocols.LEGACY, v6)
@@ -427,7 +425,6 @@ async def get_origin_address(
                 srv_address = str(rdata.target).rstrip(".")
                 srv_port = rdata.port
                 ip_type = await get_ip_type(srv_address)
-                print(f"SRV record found: {srv_address}:{srv_port} ({ip_type})")
                 if ip_type == "Domain":
                     srv_address = await get_origin_address(srv_address, srv_port, False)
                     data.extend(srv_address)
@@ -440,7 +437,6 @@ async def get_origin_address(
         ):
             response = await resolver.resolve(domain, "AAAA")
             for rdata in response:
-                print(f"AAAA record found: {rdata.address!s}")
                 data.append((str(rdata.address), ip_port, "IPv6"))
 
     async def resolve_a():
@@ -449,7 +445,6 @@ async def get_origin_address(
         ):
             response = await resolver.resolve(domain, "A")
             for rdata in response:
-                print(f"A record found: {rdata.address!s}")
                 data.append((str(rdata.address), ip_port, "IPv4"))
 
     if is_resolve_srv:
