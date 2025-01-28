@@ -426,8 +426,8 @@ async def get_origin_address(
                 srv_port = rdata.port
                 ip_type = await get_ip_type(srv_address)
                 if ip_type == "Domain":
-                    srv_address = await get_origin_address(srv_address, srv_port, False)
-                    data.extend([(addr, port, f"SRV-{ip_type}") for addr, port, ip_type in srv_address])
+                    srv_address_ = await get_origin_address(srv_address, srv_port, False)
+                    data.extend([(srv_address, port, f"SRV-{ip_type}") for addr, port, ip_type in srv_address_])
                 else:
                     data.append((srv_address, srv_port, "SRV"))
 
