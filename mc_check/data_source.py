@@ -180,6 +180,7 @@ class MineStat:
         port: int = 0,
         timeout: int = DEFAULT_TIMEOUT,
         query_protocol: SlpProtocols = SlpProtocols.ALL,
+        refer: str | None = None,
         use_ip_v6: bool | None = False,
     ) -> None:
         """
@@ -189,12 +190,18 @@ class MineStat:
         :param port: Optional port of the Minecraft server. Defaults to auto detection (25565 for Java Edition, 19132 for Bedrock/MCPE).
         :param timeout: Optional timeout in seconds for each connection attempt. Defaults to 5 seconds.
         :param query_protocol: Optional protocol to use. See minestat.SlpProtocols for available choices. Defaults to auto detection.
+        :param refer: The source of IP in the send packet Default use address.
         :param use_ip_v6: Optional, whether to use ip_v6 for DNS resolution. Defaults to False.
         """
 
         """Whether to use ip_v6 for DNS resolution"""
         self.use_ip_v6: bool | None = use_ip_v6
-        """Whether to resolved SRV records"""
+
+        """The source of the IP in the sent packet"""
+        if refer is None:
+           self.refer = address
+        else:
+           self.refer = refer
 
         self.address: str = address
         """hostname or IP address of the Minecraft server"""
@@ -689,9 +696,9 @@ class MineStat:
         # Add protocol version. If pinging to determine version, use `-1`
         req_data += bytearray([0xFF, 0xFF, 0xFF, 0xFF, 0x0F])
         # Add server address length
-        req_data += self._pack_varint(len(self.address))
+        req_data += self._pack_varint(len(self.refer))
         # Server address. Encoded with UTF8
-        req_data += bytearray(self.address, "utf8")
+        req_data += bytearray(self.refer, "utf8")
         # Server port
         req_data += struct.pack(">H", self.port)
         # Next packet state (1 for status, 2 for login)
@@ -856,14 +863,14 @@ class MineStat:
         # the string 'MC|PingHost' as UTF-16BE encoded string
         req_data += bytearray("MC|PingHost", "utf-16-be")
         # 0xXX 0xXX byte count of rest of data, 7+len(serverhostname), as short
-        req_data += struct.pack(">h", 7 + (len(self.address) * 2))
+        req_data += struct.pack(">h", 7 + (len(self.refer) * 2))
         # 0xXX [legacy] protocol version (before netty rewrite)
         # Used here: 74 (MC 1.6.2)
         req_data += bytearray([0x49])
         # strlen of serverhostname (big-endian short)
-        req_data += struct.pack(">h", len(self.address))
+        req_data += struct.pack(">h", len(self.refer))
         # the hostname of the server
-        req_data += bytearray(self.address, "utf-16-be")
+        req_data += bytearray(self.refer, "utf-16-be")
         # port of the server, as int (4 byte)
         req_data += struct.pack(">i", self.port)
 

@@ -152,7 +152,7 @@ async def build_result(ms, address, type=0):
 
 
 async def get_mc(
-    ip, port, ip_type, timeout: int = 5
+    ip, port, ip_type, refer,  timeout: int = 5
 ) -> list[tuple[MineStat | None, ConnStatus | None]]:
     """
     获取Java版和Bedrock版的MC服务器信息。
@@ -161,6 +161,7 @@ async def get_mc(
     - ip (str): 服务器的IP地址。
     - port (int): 服务器的端口。
     - ip_type (int): 服务器的IP类型。
+    - refer (str): 服务器来源地址
     - timeout (int): 请求超时时间，默认为5秒。
 
     返回:
@@ -168,10 +169,10 @@ async def get_mc(
     """
     loop = asyncio.get_event_loop()
     if ip_type.startswith("SRV"):
-        return [await loop.run_in_executor(None, get_java, ip, port, ip_type, timeout)]
+        return [await loop.run_in_executor(None, get_java, ip, port, ip_type, refer, timeout)]
     return [
-        await loop.run_in_executor(None, get_java, ip, port, ip_type, timeout),
-        await loop.run_in_executor(None, get_bedrock, ip, port, ip_type, timeout),
+        await loop.run_in_executor(None, get_java, ip, port, ip_type, refer,  timeout),
+        await loop.run_in_executor(None, get_bedrock, ip, port, ip_type, refer,  timeout),
     ]
 
 
@@ -191,7 +192,9 @@ async def get_message_list(ip: str, port: int, timeout: int = 5) -> list[Text]:
     messages = []
     results = await asyncio.gather(
         *(
-            get_mc(ip_group[0], ip_group[1], ip_group[2], timeout)
+            get_mc(ip_group[0], ip_group[1], ip_group[2],
+               ip_group[3],
+               timeout)
             for ip_group in ip_groups
         )
     )
@@ -216,7 +219,7 @@ async def get_message_list(ip: str, port: int, timeout: int = 5) -> list[Text]:
 
 
 def get_bedrock(
-    host: str, port: int, ip_type, timeout: int = 5
+    host: str, port: int, ip_type: str, refer: str, timeout: int = 5
 ) -> tuple[MineStat | None, ConnStatus | None]:
     """
     异步函数，用于通过指定的主机名、端口和超时时间获取Minecraft Bedrock版服务器状态。
@@ -224,13 +227,15 @@ def get_bedrock(
     参数:
     - host: 服务器的主机名。
     - port: 服务器的端口号。
+    - ip_type: 服务器地址类型。
+    - refer: 服务器地址来源。
     - timeout: 连接超时时间，默认为5秒。
 
     返回:
     - MineStat实例，包含服务器状态信息，如果服务器在线的话；否则可能返回None。
     """
     v6 = "IPv6" in ip_type
-    result = MineStat(host, port, timeout, SlpProtocols.BEDROCK_RAKNET, v6)
+    result = MineStat(host, port, timeout, SlpProtocols.BEDROCK_RAKNET, refer, v6)
 
     if result.online:
         return result, ConnStatus.SUCCESS
@@ -238,7 +243,7 @@ def get_bedrock(
 
 
 def get_java(
-    host: str, port: int, ip_type, timeout: int = 5
+    host: str, port: int, ip_type: str, refer: str, timeout: int = 5
 ) -> tuple[MineStat | None, ConnStatus | None]:
     """
     异步函数，用于通过指定的主机名、端口和超时时间获取Minecraft Java版服务器状态。
@@ -246,6 +251,8 @@ def get_java(
     参数:
     - host: 服务器的主机名。
     - port: 服务器的端口号。
+    - ip_type: 服务器地址类型。
+    - refer: 服务器地址来源。
     - timeout: 连接超时时间，默认为5秒。
 
     返回:
@@ -254,19 +261,19 @@ def get_java(
     v6 = "IPv6" in ip_type
 
     # Minecraft 1.4 & 1.5 (legacy SLP)
-    result = MineStat(host, port, timeout, SlpProtocols.LEGACY, v6)
+    result = MineStat(host, port, timeout, SlpProtocols.LEGACY, refer, v6)
 
     # Minecraft Beta 1.8 to Release 1.3 (beta SLP)
     if result.connection_status not in [ConnStatus.CONNFAIL, ConnStatus.SUCCESS]:
-        result = MineStat(host, port, timeout, SlpProtocols.BETA, v6)
+        result = MineStat(host, port, timeout, SlpProtocols.BETA, refer, v6)
 
     # Minecraft 1.6 (extended legacy SLP)
     if result.connection_status is not ConnStatus.CONNFAIL:
-        result = MineStat(host, port, timeout, SlpProtocols.EXTENDED_LEGACY, v6)
+        result = MineStat(host, port, timeout, SlpProtocols.EXTENDED_LEGACY, refer, v6)
 
     # Minecraft 1.7+ (JSON SLP)
     if result.connection_status is not ConnStatus.CONNFAIL:
-        result = MineStat(host, port, timeout, SlpProtocols.JSON, v6)
+        result = MineStat(host, port, timeout, SlpProtocols.JSON, refer, v6)
 
     if result.online:
         return result, ConnStatus.SUCCESS
@@ -400,16 +407,18 @@ async def get_origin_address(
     参数:
     - address (str): 需要解析的地址。
     - ip_port (int): 适用于IPv4和IPv6地址的默认端口号。
+    - is_resolve_srv (bool): 师是否解析SRV，默认True
 
     返回:
-    - List[Tuple[str, int,str]]: 一个列表，包含一个元组，元组包含三个元素：
+    - List[Tuple[str, int, str, str]]: 一个列表，包含一个元组，元组包含三个元素：
       - 第一个元素是解析后的地址（字符串形式）。
       - 第二个元素是地址的端口号（整数形式。
-      - 第三个元素是地址的类型（"IPv4" 或 "IPv6" 或 "SRV"）。
+      - 第三个元素是地址的类型（"IPv4" 或 "IPv6" 或 "SRV" 或 "SRV-IPv4" 或 "SRV-IPv6"）。
+      - 第四个元素是解析地址的来源域名或IP
     """
     ip_type = await get_ip_type(domain)
     if ip_type != "Domain":
-        return [(domain, ip_port, ip_type)]
+        return [(domain, ip_port, ip_type, domain)]
     data = []
 
     resolver = dns.asyncresolver.Resolver()
@@ -427,9 +436,9 @@ async def get_origin_address(
                 ip_type = await get_ip_type(srv_address)
                 if ip_type == "Domain":
                     srv_address_ = await get_origin_address(srv_address, srv_port, False)
-                    data.extend([(srv_address, port, f"SRV-{ip_type}") for addr, port, ip_type in srv_address_])
+                    data.extend([(addr, port, f"SRV-{ip_type}", refer) for addr, port, ip_type, refer in srv_address_])
                 else:
-                    data.append((srv_address, srv_port, "SRV"))
+                    data.append((srv_address, srv_port, "SRV", domain))
 
     async def resolve_aaaa():
         with contextlib.suppress(
@@ -437,7 +446,7 @@ async def get_origin_address(
         ):
             response = await resolver.resolve(domain, "AAAA")
             for rdata in response:
-                data.append((str(rdata.address), ip_port, "IPv6"))
+                data.append((str(rdata.address), ip_port, "IPv6", domain))
 
     async def resolve_a():
         with contextlib.suppress(
@@ -445,7 +454,7 @@ async def get_origin_address(
         ):
             response = await resolver.resolve(domain, "A")
             for rdata in response:
-                data.append((str(rdata.address), ip_port, "IPv4"))
+                data.append((str(rdata.address), ip_port, "IPv4", domain))
 
     if is_resolve_srv:
         await asyncio.gather(resolve_srv(), resolve_aaaa(), resolve_a())
