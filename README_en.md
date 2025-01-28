@@ -39,7 +39,7 @@ English|[简体中文](README.md)
 
 v1.24
 
-![v1.22](https://github.com/user-attachments/assets/5ec475a0-4a73-4a51-b1b7-3986ed15ac37)
+![Image_31020983743694.png](https://github.com/user-attachments/assets/2db47c9a-7ba1-4ce7-a31c-b65f6e848308)
 ![Image](https://github.com/user-attachments/assets/2ca058f5-2341-425d-8033-63dad8d43fbf)
 
 ## 💿 Install
