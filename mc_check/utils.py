@@ -398,7 +398,7 @@ async def get_ip_type(address: str) -> str:
 
 async def get_origin_address(
     domain: str, ip_port: int, is_resolve_srv=True
-) -> list[tuple[str, int, str]]:
+) -> list[tuple[str, int, str, str]]:
     """
     获取地址所解析的A或AAAA记录，如果传入不是域名直接返回。
     同时返回地址是IPv6还是IPv4。
