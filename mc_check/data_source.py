@@ -962,9 +962,11 @@ class MineStat:
             content_len = struct.unpack(">xh", raw_header)[0]
         except struct.error:
             return ConnStatus.UNKNOWN
-
-        # Receive full payload and close socket
-        payload_raw = bytearray(self._recv_exact(sock, content_len * 2))
+        try:
+            # Receive full payload and close socket
+            payload_raw = bytearray(self._recv_exact(sock, content_len * 2))
+        except ConnectionAbortedError:
+            return ConnStatus.UNKNOWN
         sock.close()
 
         # Set protocol version
@@ -1051,9 +1053,11 @@ class MineStat:
             content_len = struct.unpack(">xh", raw_header)[0]
         except struct.error:
             return ConnStatus.UNKNOWN
-
+        try:
         # Receive full payload and close socket
-        payload_raw = bytearray(self._recv_exact(sock, content_len * 2))
+            payload_raw = bytearray(self._recv_exact(sock, content_len * 2))
+        except ConnectionAbortedError:
+            return ConnStatus.UNKNOWN
         sock.close()
 
         # Set protocol version
