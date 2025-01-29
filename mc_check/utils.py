@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import contextlib
-import io
 import os
 import re
 import traceback
