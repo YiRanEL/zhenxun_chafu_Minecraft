@@ -70,7 +70,7 @@ mcheck 2001:db8:85a3::8a2e:370:7334:25565  <- IPv6 server address and port
 ```
 or
 ```
-mcheck [2001:db8:85a3::8a2e:370:7334]  <- IPv6服务器地址
+mcheck [2001:db8:85a3::8a2e:370:7334]  <- IPv6 server address
 ```
 
 ## ⚙️ Configuration
