@@ -404,7 +404,7 @@ async def get_origin_address(
                 ip_type = await get_ip_type(srv_address)
                 if ip_type == "Domain":
                     srv_address_ = await get_origin_address(srv_address, srv_port, False)
-                    data.extend([srv_address_[0][0], srv_address_[0][1], f"SRV-{ip_type}", srv_address_[0][3]])
+                    data.extend([(srv_address_[0][0], srv_address_[0][1], f"SRV-{srv_address_[0][2]}", srv_address_[0][3])])
                     #data.extend([(addr, port, f"SRV-{ip_type}", refer) for addr, port, ip_type, refer in srv_address_])
                 else:
                     data.append((srv_address, srv_port, "SRV", domain))
