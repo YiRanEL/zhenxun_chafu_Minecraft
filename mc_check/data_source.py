@@ -169,8 +169,10 @@ class MineStat:
     """The MineStat version"""
     DEFAULT_TCP_PORT = 25565
     """default TCP port for SLP queries"""
-    DEFAULT_BEDROCK_PORT = 19132
-    """default UDP port for Bedrock/MCPE servers"""
+    DEFAULT_BEDROCK_PORT_V4 = 19132
+    """default UDP port for Bedrock/MCPE IPv4 servers"""
+    DEFAULT_BEDROCK_PORT_V6 = 19133
+    """default UDP port for Bedrock/MCPE IPv6 servers"""
     DEFAULT_TIMEOUT = 5
     """default TCP timeout in seconds"""
 
@@ -181,7 +183,7 @@ class MineStat:
         timeout: int = DEFAULT_TIMEOUT,
         query_protocol: SlpProtocols = SlpProtocols.ALL,
         refer: str | None = None,
-        use_ip_v6: bool | None = False,
+        use_ip_v6: bool = False,
     ) -> None:
         """
         minestat - The Minecraft status checker. Supports Minecraft Java edition and Bedrock/Education/PE servers.
@@ -210,7 +212,10 @@ class MineStat:
         if not port:
             autoport = True
             if query_protocol is SlpProtocols.BEDROCK_RAKNET:
-                port = self.DEFAULT_BEDROCK_PORT
+                if use_ip_v6:
+                   port = self.DEFAULT_BEDROCK_PORT_V6
+                else:
+                   port = self.DEFAULT_BEDROCK_PORT_V4
             else:
                 port = self.DEFAULT_TCP_PORT
 
@@ -288,7 +293,10 @@ class MineStat:
 
         # Minecraft Bedrock/Pocket/Education Edition (MCPE/MCEE)
         if autoport and not self.port:
-            self.port = self.DEFAULT_BEDROCK_PORT
+            if use_ip_v6:
+               self.port = self.DEFAULT_BEDROCK_PORT_V6
+            else:
+               self.port = self.DEFAULT_BEDROCK_PORT_V4
 
         result = self.bedrock_raknet_query()
         self.connection_status = result
