@@ -183,7 +183,7 @@ class MineStat:
         timeout: int = DEFAULT_TIMEOUT,
         query_protocol: SlpProtocols = SlpProtocols.ALL,
         refer: str | None = None,
-        use_ip_v6: bool = False,
+        use_ipv6: bool = False,
     ) -> None:
         """
         minestat - The Minecraft status checker. Supports Minecraft Java edition and Bedrock/Education/PE servers.
@@ -193,11 +193,11 @@ class MineStat:
         :param timeout: Optional timeout in seconds for each connection attempt. Defaults to 5 seconds.
         :param query_protocol: Optional protocol to use. See minestat.SlpProtocols for available choices. Defaults to auto detection.
         :param refer: The source of IP in the send packet Default use address.
-        :param use_ip_v6: Optional, whether to use ip_v6 for DNS resolution. Defaults to False.
+        :param use_ipv6: Optional, whether to use ip_v6 for DNS resolution. Defaults to False.
         """
 
         """Whether to use ip_v6 for DNS resolution"""
-        self.use_ip_v6: bool | None = use_ip_v6
+        self.use_ipv6: bool | None = use_ipv6
 
         """The source of the IP in the sent packet"""
         if refer is None:
@@ -212,7 +212,7 @@ class MineStat:
         if not port:
             autoport = True
             if query_protocol is SlpProtocols.BEDROCK_RAKNET:
-                if use_ip_v6:
+                if use_ipv6:
                    port = self.DEFAULT_BEDROCK_PORT_V6
                 else:
                    port = self.DEFAULT_BEDROCK_PORT_V4
@@ -293,7 +293,7 @@ class MineStat:
 
         # Minecraft Bedrock/Pocket/Education Edition (MCPE/MCEE)
         if autoport and not self.port:
-            if use_ip_v6:
+            if use_ipv6:
                self.port = self.DEFAULT_BEDROCK_PORT_V6
             else:
                self.port = self.DEFAULT_BEDROCK_PORT_V4
@@ -379,7 +379,7 @@ class MineStat:
         )
 
         # Create socket with type DGRAM (for UDP)
-        if self.use_ip_v6:
+        if self.use_ipv6:
             sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -523,7 +523,7 @@ class MineStat:
         #   receive status data
 
         # Create UDP socket and set timeout
-        if self.use_ip_v6:
+        if self.use_ipv6:
             sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -686,7 +686,7 @@ class MineStat:
 
         See https://wiki.vg/Server_List_Ping#Current
         """
-        if self.use_ip_v6:
+        if self.use_ipv6:
             sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -850,7 +850,7 @@ class MineStat:
         See https://wiki.vg/Server_List_Ping#1.6
         :return:
         """
-        if self.use_ip_v6:
+        if self.use_ipv6:
             sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -930,7 +930,7 @@ class MineStat:
 
         :return: ConnStatus
         """
-        if self.use_ip_v6:
+        if self.use_ipv6:
             sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1019,7 +1019,7 @@ class MineStat:
 
         :return: ConnStatus
         """
-        if self.use_ip_v6:
+        if self.use_ipv6:
             sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         else:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
