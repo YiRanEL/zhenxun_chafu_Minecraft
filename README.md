@@ -84,14 +84,13 @@ v1.24
 | 配置项 | 必填 | 默认值 | 说明 |
 |:-----:|:----:|:----:|:----:|
 | `language` | 否 | `zh-cn` | 插件渲染图片所使用的语言<br>可用语言:[`zh-cn`,`zh-tw`,`en`] |
-| `type` | 否 | `0` | 插件发送的消息类型(`0`为HTML渲染图片, `1`为图片, `2`为普通文本) |
+| `type` | 否 | `0` | 插件发送的消息类型(`0`为HTML渲染图片, `1`为普通文本) |
 
 ## 🎲 消息类型对比
 
 | 类型 | 特殊样式 | Favicon | 彩色下划线/删除线 | 全Unicode字体支持 |
 |:-----:|:-----:|:-----:|:-----:|:-----:|
 | 文本 | ❌ | ⭕ | ❌ | ⭕ |
-| 图片 | ⭕ | ⭕ | ⭕ | ❌ |
 | HTML | ⭕ | ⭕ | ⭕ | ⭕ |
 
 # [下载地址](https://github.com/molanp/zhenxun_chafu_Minecraft/releases)
@@ -103,5 +102,5 @@ pip install dnspython
 ```
 
 ## 感谢
-* [minestat](https://github.com/FragLand/minestat): 一个多平台语言的我的世界服务器查询模块
+* [minestat](https://github.com/FragLand/minestat): 一个多平台语言的我的世界服务器查询模块，本插件的主要功能实现魔改于此脚本
 * [@tzdtwsj](https://github.com/tzdtwsj): 为该项目提出了图片渲染功能、颜色渲染功能建议和互通服查询方案实现思路等贡献

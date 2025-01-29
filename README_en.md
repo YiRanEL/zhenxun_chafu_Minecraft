@@ -78,14 +78,13 @@ mcheck [2001:db8:85a3::8a2e:370:7334]  <- IPv6服务器地址
 | Configuration Item | Required | Default Value | Description |
 |:-----:|:----:|:----:|:----:|
 | `language` | False | `zh-cn` | Languages used by the plugin to render images<br>Available languages: [`zh-cn`,`zh-tw`,`en`] |
-| `type` | False | `0` | The type of message the plugin sends (`0` for HTML, `1` for image, `2` for text) |
+| `type` | False | `0` | The type of message the plugin sends (`0` for HTML, `1` for text) |
 
 ## 🎲 Comparison of message types
 
 | Type | Special Styles | Favicon | Colored underline/strikethrough | Full Unicode font support |
 |:-----:|:-----:|:-----:|:-----:|:-----:|
 | Text | ❌ | ⭕ | ❌ | ⭕ |
-| Picture | ⭕ | ⭕ | ⭕ | ❌ |
 | HTML | ⭕ | ⭕ | ⭕ | ⭕ |
 
 # [Download](https://github.com/molanp/zhenxun_chafu_Minecraft/releases)
@@ -93,9 +92,9 @@ mcheck [2001:db8:85a3::8a2e:370:7334]  <- IPv6服务器地址
 
 ## Requirement
 ```shell
-pip install "dnspython>=2.2.1,<2.5.0"
+pip install dnspython
 ```
 
 ## Thanks
-* [minestat](https://github.com/FragLand/minestat): A multi-platform Minecraft server query module
+* [minestat](https://github.com/FragLand/minestat): A multi-platform Minecraft server query module.The main function of this plugin is to implement the magic change in this script.
 * [@tzdtwsj](https://github.com/tzdtwsj): For the project, suggestions for image rendering function, color rendering function and implementation ideas of interoperability query scheme are proposed.

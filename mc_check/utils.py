@@ -83,13 +83,6 @@ async def build_result(ms, address, type=0):
         )
         return NImage(raw=pic)
     elif type == 1:
-        motd_part = (
-            f"\n{lang_data[lang]['motd']}{await parse_motd2mark(ms.motd)}[#RESET]"
-        )
-        version_part = (
-            f"\n{lang_data[lang]['version']}{await parse_motd2mark(ms.version)}[#RESET]"
-        )
-    elif type == 2:
         motd_part = f"\n{lang_data[lang]['motd']}{ms.stripped_motd}"
         version_part = f"\n{lang_data[lang]['version']}{ms.version}"
 
@@ -112,29 +105,6 @@ async def build_result(ms, address, type=0):
         + f"\n{lang_data[lang]['players']}{ms.current_players}/{ms.max_players}"
     )
     if type == 1:
-        result += (
-            f"""\n{lang_data[lang]["player_list"]}{
-                await parse_motd2mark(", ".join(ms.player_list))
-            }[#RESET]"""
-            if ms.player_list
-            else ""
-        )
-        return (
-            [
-                NImage(
-                    raw=(
-                        await ColoredTextImage(result).draw_text_with_style()
-                    ).pic2bytes()
-                ),
-                Text("Favicon:"),
-                NImage(raw=base64.b64decode(ms.favicon_b64.split(",")[1])),
-            ]
-            if ms.favicon is not None
-            else NImage(
-                raw=(await ColoredTextImage(result).draw_text_with_style()).pic2bytes()
-            )
-        )
-    elif type == 2:
         result += (
             f"\n{lang_data[lang]['player_list']}{', '.join(ms.player_list)}"
             if ms.player_list
@@ -462,133 +432,6 @@ async def get_origin_address(
         await asyncio.gather(resolve_aaaa(), resolve_a())
 
     return data
-
-
-async def parse_motd2mark(json_data: str | None) -> str | None:
-    """
-    解析MOTD数据并转换为带有自定义十六进制颜色标记的字符串。
-
-    参数:
-    - json_data (str | None): MOTD数据。
-
-    返回:
-    - str | None: 带有自定义十六进制颜色标记的字符串。
-    """
-    if json_data is None:
-        return None
-
-    standard_color_map = {
-        "black": "[#000]",
-        "dark_blue": "[#00A]",
-        "dark_green": "[#0A0]",
-        "dark_aqua": "[#0AA]",
-        "dark_red": "[#A00]",
-        "dark_purple": "[#A0A]",
-        "gold": "[#FFA]",
-        "gray": "[#AAA]",
-        "dark_gray": "[#555]",
-        "blue": "[#00F]",
-        "green": "[#0F0]",
-        "aqua": "[#0FF]",
-        "red": "[#F00]",
-        "light_purple": "[#FAF]",
-        "yellow": "[#FF0]",
-        "white": "[#FFF]",
-        "reset": "[#RESET]",
-        "bold": "[#BOLD]",
-        "italic": "[#ITALIC]",
-        "underline": "[#UNDERLINE]",
-        "strikethrough": "[#STRIKETHROUGH]",
-        "§0": "[#000]",  # black
-        "§1": "[#00A]",  # dark blue
-        "§2": "[#0A0]",  # dark green
-        "§3": "[#0AA]",  # dark aqua
-        "§4": "[#A00]",  # dark red
-        "§5": "[#A0A]",  # dark purple
-        "§6": "[#FFA]",  # gold
-        "§7": "[#AAA]",  # gray
-        "§8": "[#555]",  # dark gray
-        "§9": "[#00F]",  # blue
-        "§a": "[#0F0]",  # green
-        "§b": "[#0FF]",  # aqua
-        "§c": "[#F00]",  # red
-        "§d": "[#FAF]",  # light purple
-        "§e": "[#FF0]",  # yellow
-        "§f": "[#FFF]",  # white
-        "§g": "[#DDD605]",  # minecoin gold
-        "§h": "[#E3D4D1]",  # material quartz
-        "§i": "[#CECACA]",  # material iron
-        "§j": "[#443A3B]",  # material netherite
-        "§l": "[#BOLD]",  # bold
-        "§m": "[#STRIKETHROUGH]",  # strikethrough
-        "§n": "[#UNDERLINE]",  # underline
-        "§o": "[#ITALIC]",  # italic
-        "§p": "[#DEB12D]",  # material gold
-        "§q": "[#47A036]",  # material emerald
-        "§r": "[#RESET]",  # reset
-        "§s": "[#2CBAA8]",  # material diamond
-        "§t": "[#21497B]",  # material lapis
-        "§u": "[#9A5CC6]",  # material amethyst
-    }
-
-    try:
-        json_data = ujson.loads(json_data)
-    except ujson.JSONDecodeError:
-        result = ""
-        i = 0
-        while i < len(json_data):
-            if json_data[i] == "§":
-                style_code = json_data[i : i + 2]
-                if style_code in standard_color_map:
-                    result += standard_color_map[style_code]
-                    i += 2
-                    continue
-            result += json_data[i]
-            i += 1
-
-        return result
-
-    async def parse_extra(extra):
-        result = ""
-        extra_str = ""
-        if isinstance(extra, dict) and "extra" in extra:
-            for key in extra:
-                if key == "extra":
-                    result += await parse_extra(extra[key])
-                elif key == "text":
-                    result += await parse_extra(extra[key])
-        elif isinstance(extra, dict):
-            color = extra.get("color", "")
-            text = extra.get("text", "")
-
-            if color.startswith("#"):
-                hex_color = color[1:]
-                if len(hex_color) == 3:
-                    hex_color = "".join([c * 2 for c in hex_color])
-                color_str = f"[#{hex_color.upper()}]"
-            else:
-                color_str = standard_color_map.get(color, "")
-
-            if extra.get("bold") is True:
-                extra_str += standard_color_map["bold"]
-            if extra.get("italic") is True:
-                extra_str += standard_color_map["italic"]
-            if extra.get("underline") is True:
-                extra_str += standard_color_map["underline"]
-            if extra.get("strikethrough") is True:
-                extra_str += standard_color_map["strikethrough"]
-
-            result += f"{extra_str}{color_str}{text}[#RESET]"
-        elif isinstance(extra, list):
-            for item in extra:
-                result += await parse_extra(item)
-        else:
-            result += str(extra)
-
-        return result
-
-    return await parse_extra(json_data)
-
 
 async def parse_motd2html(json_data: str | None) -> str | None:
     """

@@ -44,7 +44,7 @@ __plugin_meta__ = PluginMetadata(
             RegisterConfig(
                 key="type",
                 value=0,
-                help="结果发送类型，0为发送HTML，1为发送图片, 2为发送文本",
+                help="结果发送类型，0为发送HTML，1为发送文本",
                 default_value=0,
                 type=int,
             ),
