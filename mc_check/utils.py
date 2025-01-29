@@ -10,7 +10,6 @@ import dns.asyncresolver
 import dns.name
 import idna
 from nonebot import require
-from PIL import Image, ImageDraw, ImageFont
 import ujson
 
 from zhenxun.services.log import logger
