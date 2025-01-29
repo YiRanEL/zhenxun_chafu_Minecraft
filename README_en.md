@@ -37,10 +37,10 @@ English|[简体中文](README.md)
 
 ## 🖼️ Renderings
 
-v1.24
+v1.25
 
 ![Image_31020983743694.png](https://github.com/user-attachments/assets/2db47c9a-7ba1-4ce7-a31c-b65f6e848308)
-![Image](https://github.com/user-attachments/assets/2ca058f5-2341-425d-8033-63dad8d43fbf)
+![image](https://github.com/user-attachments/assets/d0830fe9-c690-4017-b601-f46a1d7e1894)
 
 ## 💿 Install
 
