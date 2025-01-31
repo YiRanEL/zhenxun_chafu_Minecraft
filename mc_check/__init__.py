@@ -1,4 +1,4 @@
-from arclet.alconna import Alconna, Args
+from arclet.alconna import Alconna, Args, CommandMeta
 from nonebot.plugin import PluginMetadata
 from nonebot_plugin_alconna import Match, Text, UniMessage, on_alconna
 
@@ -53,7 +53,7 @@ __plugin_meta__ = PluginMetadata(
 )
 
 check = on_alconna(
-    Alconna("mcheck", Args["host?", str]),
+    Alconna("mcheck", Args["host?", str], meta=CommandMeta(compact=True)),
     aliases={"查服"},
     priority=5,
     block=True,
@@ -61,21 +61,21 @@ check = on_alconna(
 
 
 lang_change = on_alconna(
-    Alconna("set_lang", Args["language", str]),
+    Alconna("set_lang", Args["language", str], meta=CommandMeta(compact=True)),
     aliases={"设置语言"},
     priority=5,
     block=True,
 )
 
 lang_now = on_alconna(
-    Alconna("lang_now"),
+    Alconna("lang_now", meta=CommandMeta(compact=True)),
     aliases={"当前语言"},
     priority=5,
     block=True,
 )
 
 lang_list = on_alconna(
-    Alconna("lang_list"),
+    Alconna("lang_list", meta=CommandMeta(compact=True)),
     aliases={"语言列表"},
     priority=5,
     block=True,
