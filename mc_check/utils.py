@@ -120,7 +120,7 @@ async def build_result(ms, address, type=0):
 
 
 async def get_mc(
-    ip, port, ip_type, refer,  timeout: int = 5
+    ip, port, ip_type, refer, timeout: int = 5
 ) -> list[tuple[MineStat | None, ConnStatus | None]]:
     """
     获取Java版和Bedrock版的MC服务器信息。
@@ -137,10 +137,16 @@ async def get_mc(
     """
     loop = asyncio.get_event_loop()
     if ip_type.startswith("SRV"):
-        return [await loop.run_in_executor(None, get_java, ip, port, ip_type, refer, timeout)]
+        return [
+            await loop.run_in_executor(
+                None, get_java, ip, port, ip_type, refer, timeout
+            )
+        ]
     return [
-        await loop.run_in_executor(None, get_java, ip, port, ip_type, refer,  timeout),
-        await loop.run_in_executor(None, get_bedrock, ip, port, ip_type, refer,  timeout),
+        await loop.run_in_executor(None, get_java, ip, port, ip_type, refer, timeout),
+        await loop.run_in_executor(
+            None, get_bedrock, ip, port, ip_type, refer, timeout
+        ),
     ]
 
 
@@ -160,9 +166,7 @@ async def get_message_list(ip: str, port: int, timeout: int = 5) -> list[Text]:
     messages = []
     results = await asyncio.gather(
         *(
-            get_mc(ip_group[0], ip_group[1], ip_group[2],
-               ip_group[3],
-               timeout)
+            get_mc(ip_group[0], ip_group[1], ip_group[2], ip_group[3], timeout)
             for ip_group in ip_groups
         )
     )
@@ -365,7 +369,7 @@ async def get_ip_type(address: str) -> str:
 
 
 async def get_origin_address(
-    domain: str, ip_port: int, is_resolve_srv=True
+    domain: str, ip_port: int = 0, is_resolve_srv=True
 ) -> list[tuple[str, int, str, str]]:
     """
     获取地址所解析的A或AAAA记录，如果传入不是域名直接返回。
@@ -403,11 +407,30 @@ async def get_origin_address(
                 srv_port = rdata.port
                 ip_type = await get_ip_type(srv_address)
                 if ip_type == "Domain":
-                    srv_address_ = await get_origin_address(srv_address, srv_port, False)
-                    data.extend([(srv_address_[0][0], srv_address_[0][1], f"SRV-{srv_address_[0][2]}", srv_address_[0][3])])
-                    #data.extend([(addr, port, f"SRV-{ip_type}", refer) for addr, port, ip_type, refer in srv_address_])
+                    srv_address_ = await get_origin_address(
+                        srv_address, srv_port, False
+                    )
+                    srv_data = (
+                        srv_address_[0][0],
+                        srv_address_[0][1],
+                        f"SRV-{srv_address_[0][2]}",
+                        srv_address_[0][3],
+                    )
+                    # data.extend([(addr, port, f"SRV-{ip_type}", refer) for addr, port, ip_type, refer in srv_address_])
                 else:
-                    data.append((srv_address, srv_port, "SRV", domain))
+                    srv_data = (
+                        srv_address,
+                        srv_port,
+                        f"SRV-{ip_type}",
+                        domain,
+                    )
+                if not any(
+                    entry[0] == srv_data[0]
+                    and entry[1] == srv_data[1]
+                    and entry[2].replace("SRV-", "") == srv_data[2].replace("SRV-", "")
+                    for entry in data
+                ):
+                    data.append(srv_data)
                 break
 
     async def resolve_aaaa():
@@ -429,11 +452,12 @@ async def get_origin_address(
                 break
 
     if is_resolve_srv:
-        await asyncio.gather(resolve_srv(), resolve_aaaa(), resolve_a())
+        await asyncio.gather(resolve_aaaa(), resolve_a(), resolve_srv())
     else:
         await asyncio.gather(resolve_aaaa(), resolve_a())
 
     return data
+
 
 async def parse_motd2html(json_data: str | None) -> str | None:
     """
