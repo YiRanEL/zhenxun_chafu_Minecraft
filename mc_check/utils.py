@@ -243,6 +243,10 @@ def get_java(
     if result.connection_status is not ConnStatus.CONNFAIL:
         result = MineStat(host, port, timeout, SlpProtocols.EXTENDED_LEGACY, refer, v6)
 
+    # Minecraft 1.9+ (JSON SLP)
+    if result.connection_status is not ConnStatus.CONNFAIL:
+        result = MineStat(host, port, timeout, SlpProtocols.QUERY, refer, v6)
+
     # Minecraft 1.7+ (JSON SLP)
     if result.connection_status is not ConnStatus.CONNFAIL:
         result = MineStat(host, port, timeout, SlpProtocols.JSON, refer, v6)
