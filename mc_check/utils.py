@@ -549,7 +549,7 @@ async def parse_motd2html(json_data: str | None) -> str | None:
             else:
                 color_html_str = standard_color_map.get(color, ("", ""))
                 color_code = re.search(
-                    r"color:\s*(#[0-9A-Fa-f]{7});", color_html_str[0]
+                    r"color:\s*(#[0-9A-Fa-f]{6});", color_html_str[0]
                 )
                 color_code = color_code[1] if color_code else "#FFFFFF"
             # 更新样式栈
