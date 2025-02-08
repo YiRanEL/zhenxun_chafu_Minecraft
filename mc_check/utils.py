@@ -490,10 +490,10 @@ async def parse_motd2html(json_data: str | None) -> str | None:
         "yellow": ('<span style="color:#FFFF00;">', "</span>"),
         "white": ('<span style="color:#FFFFFF;">', "</span>"),
         "reset": ("</b></i></u></s>", ""),
-        "bold": ("<b style='color:#{};'>", "</b>"),
-        "italic": ("<i style='color:#{};'>", "</i>"),
-        "underline": ("<u style='color:#{};'>", "</u>"),
-        "strikethrough": ("<s style='color:#{};'>", "</s>"),
+        "bold": ("<b style='color:{};'>", "</b>"),
+        "italic": ("<i style='color:{};'>", "</i>"),
+        "underline": ("<u style='color:{};'>", "</u>"),
+        "strikethrough": ("<s style='color:{};'>", "</s>"),
         "§0": ('<span style="color:#000000;">', "</span>"),  # black
         "§1": ('<span style="color:#0000AA;">', "</span>"),  # dark blue
         "§2": ('<span style="color:#00AA00;">', "</span>"),  # dark green
@@ -515,10 +515,10 @@ async def parse_motd2html(json_data: str | None) -> str | None:
         "§i": ('<span style="color:#CECACA;">', "</span>"),  # material iron
         # material netherite
         "§j": ('<span style="color:#443A3B;">', "</span>"),
-        "§l": ("<b style='color:#{};'>", "</b>"),  # bold
-        "§m": ("<s style='color:#{};'>", "</s>"),  # strikethrough
-        "§n": ("<u style='color:#{};'>", "</u>"),  # underline
-        "§o": ("<i style='color:#{};'>", "</i>"),  # italic
+        "§l": ("<b style='color:{};'>", "</b>"),  # bold
+        "§m": ("<s style='color:{};'>", "</s>"),  # strikethrough
+        "§n": ("<u style='color:{};'>", "</u>"),  # underline
+        "§o": ("<i style='color:{};'>", "</i>"),  # italic
         "§p": ('<span style="color:#DEB12D;">', "</span>"),  # material gold
         "§q": ('<span style="color:#47A036;">', "</span>"),  # material emerald
         "§r": ("</b></i></u></s>", ""),  # reset
@@ -549,7 +549,7 @@ async def parse_motd2html(json_data: str | None) -> str | None:
             else:
                 color_html_str = standard_color_map.get(color, ("", ""))
                 color_code = re.search(
-                    r"color:\s*#([0-9A-Fa-f]{6});", color_html_str[0]
+                    r"color:\s*(#[0-9A-Fa-f]{7});", color_html_str[0]
                 )
                 color_code = color_code[1] if color_code else "#FFFFFF"
             # 更新样式栈
